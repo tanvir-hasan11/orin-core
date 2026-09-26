@@ -12,9 +12,7 @@ if (!function_exists('e')) {
 }
 
 if (!function_exists('config')) {
-    /**
-     * @param array<string, mixed> $tree
-     */
+    /** @param array<string, mixed> $tree */
     function config(array $tree, string $key, mixed $default = null): mixed
     {
         $segments = explode('.', $key);
@@ -41,9 +39,7 @@ if (!function_exists('base_path')) {
 }
 
 if (!function_exists('old')) {
-    /**
-     * @param array<string, mixed> $flash
-     */
+    /** @param array<string, mixed> $flash */
     function old(array $flash, string $key, string $default = ''): string
     {
         $values = $flash['old'] ?? [];
@@ -66,9 +62,7 @@ if (!function_exists('app')) {
 }
 
 if (!function_exists('view')) {
-    /**
-     * @param array<string, mixed> $data
-     */
+    /** @param array<string, mixed> $data */
     function view(string $template, array $data = [], ?string $layout = 'layouts/app'): string
     {
         return app('view')->render($template, $data, $layout);
@@ -127,12 +121,16 @@ if (!function_exists('render_sidebar')) {
 if (!function_exists('merchant_sidebar')) {
     function merchant_sidebar(): string
     {
-        // The daily work: answer customers and work the leads.
+        // Daily work first, then the agent, then setup and billing.
         // Provider selection is NOT here - that is a platform decision.
         return render_sidebar([
             '/merchant/dashboard' => 'Dashboard',
             '/merchant/inbox' => 'Inbox',
             '/merchant/leads' => 'Leads',
+            '/merchant/followups' => 'Follow-ups',
+            '/merchant/actions' => 'Agent Actions',
+            '/merchant/agents' => 'AI Agents',
+            '/merchant/knowledge' => 'Knowledge',
             '/merchant/channels' => 'Channels',
             '/merchant/profile' => 'Business Profile',
             '/merchant/usage' => 'Usage',

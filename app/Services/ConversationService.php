@@ -21,12 +21,10 @@ final class ConversationService
             return false;
         }
 
-        $row = $this->db->first(
+        return $this->db->first(
             'SELECT id FROM messages WHERE merchant_id = :m AND external_id = :e LIMIT 1',
             ['m' => $merchantId, 'e' => $externalId]
-        );
-
-        return $row !== null;
+        ) !== null;
     }
 
     /** @return array<string, mixed> */
@@ -94,6 +92,7 @@ final class ConversationService
     public function storeMessage(array $data): int
     {
         $data['created_at'] = $data['created_at'] ?? date('Y-m-d H:i:s');
+        $data['status'] = $data['status'] ?? 'sent';
 
         return $this->db->insert('messages', $data);
     }
@@ -130,13 +129,20 @@ final class ConversationService
         ];
     }
 
-    /** @return array<int, array<string, mixed>> */
+    /**
+     * Transcript for the prompt. Drafts are excluded: the model should not
+     * believe it already answered something a human never approved.
+     *
+     * @return array<int, array<string, mixed>>
+     */
     public function recentHistory(int $conversationId, int $limit = 12): array
     {
         $limit = max(1, min(50, $limit));
 
         $rows = $this->db->select(
-            'SELECT direction, sender, body FROM messages WHERE conversation_id = :c ORDER BY id DESC LIMIT ' . $limit,
+            "SELECT direction, sender, body FROM messages
+             WHERE conversation_id = :c AND status <> 'draft'
+             ORDER BY id DESC LIMIT " . $limit,
             ['c' => $conversationId]
         );
 
@@ -149,16 +155,17 @@ final class ConversationService
         $limit = max(1, min(200, $limit));
 
         return $this->db->select(
-            'SELECT c.id, c.channel, c.status, c.handoff_status, c.message_count, c.last_message_at,
+            "SELECT c.id, c.channel, c.status, c.handoff_status, c.message_count, c.last_message_at,
                     ct.id AS contact_id, ct.name AS contact_name, ct.phone AS contact_phone,
                     (SELECT m.body FROM messages m WHERE m.conversation_id = c.id ORDER BY m.id DESC LIMIT 1) AS last_body,
                     (SELECT m.direction FROM messages m WHERE m.conversation_id = c.id ORDER BY m.id DESC LIMIT 1) AS last_direction,
-                    (SELECT l.stage FROM leads l WHERE l.conversation_id = c.id LIMIT 1) AS lead_stage
+                    (SELECT l.stage FROM leads l WHERE l.conversation_id = c.id LIMIT 1) AS lead_stage,
+                    (SELECT COUNT(*) FROM messages m2 WHERE m2.conversation_id = c.id AND m2.status = 'draft') AS draft_count
              FROM conversations c
              JOIN contacts ct ON ct.id = c.contact_id
              WHERE c.merchant_id = :m
              ORDER BY c.last_message_at DESC, c.id DESC
-             LIMIT ' . $limit,
+             LIMIT " . $limit,
             ['m' => $merchantId]
         );
     }
@@ -183,7 +190,7 @@ final class ConversationService
         $limit = max(1, min(500, $limit));
 
         return $this->db->select(
-            'SELECT id, direction, sender, content_type, body, ai_provider, ai_model, created_at
+            'SELECT id, direction, sender, content_type, body, status, ai_provider, ai_model, created_at
              FROM messages WHERE conversation_id = :c ORDER BY id ASC LIMIT ' . $limit,
             ['c' => $conversationId]
         );

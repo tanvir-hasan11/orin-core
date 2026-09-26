@@ -6,13 +6,18 @@ namespace Orin\Core;
 
 use Orin\Channels\MessengerClient;
 use Orin\Channels\WhatsAppClient;
+use Orin\Services\AgentPromptBuilder;
+use Orin\Services\AgentService;
+use Orin\Services\AgentSkillRunner;
 use Orin\Services\AiGateway;
 use Orin\Services\ApiKeyService;
 use Orin\Services\AuditService;
 use Orin\Services\AuthService;
 use Orin\Services\ChannelService;
 use Orin\Services\ConversationService;
+use Orin\Services\FollowUpService;
 use Orin\Services\InboundMessageProcessor;
+use Orin\Services\KnowledgeService;
 use Orin\Services\LeadService;
 use Orin\Services\MerchantService;
 use Orin\Services\OutboundSender;
@@ -114,6 +119,15 @@ final class App
         $channels = new ChannelService($db, $crypto, $audit);
         $this->container->set('channel_service', $channels);
 
+        $agents = new AgentService($db, $audit);
+        $this->container->set('agent_service', $agents);
+
+        $knowledge = new KnowledgeService($db, $audit);
+        $this->container->set('knowledge_service', $knowledge);
+
+        $followups = new FollowUpService($db);
+        $this->container->set('followup_service', $followups);
+
         $http = new HttpClient((int) ($this->config['engine']['timeout'] ?? 30));
         $this->container->set('whatsapp_client', new WhatsAppClient($http, $crypto));
         $this->container->set('messenger_client', new MessengerClient($http, $crypto));
@@ -134,14 +148,30 @@ final class App
 
         $this->container->set('vertical_prompt_builder', new VerticalPromptBuilder($verticals));
 
+        $this->container->set('agent_prompt_builder', new AgentPromptBuilder(
+            $verticals,
+            $this->container->get('vertical_prompt_builder'),
+        ));
+
+        $this->container->set('agent_skill_runner', new AgentSkillRunner(
+            $db,
+            $leads,
+            $conversations,
+            $followups,
+            $logger,
+        ));
+
         $this->container->set('inbound_processor', new InboundMessageProcessor(
             $db,
             $channels,
             $conversations,
             $leads,
-            $this->container->get('vertical_prompt_builder'),
+            $agents,
+            $knowledge,
+            $this->container->get('agent_prompt_builder'),
             $this->container->get('ai_gateway'),
             new ReplyDirectiveParser(),
+            $this->container->get('agent_skill_runner'),
             $this->container->get('outbound_sender'),
             $logger,
             (int) ($app['reply_history_limit'] ?? 12),

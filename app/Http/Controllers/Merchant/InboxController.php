@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace Orin\Http\Controllers\Merchant;
 
+use Orin\Core\Database;
 use Orin\Core\Request;
 use Orin\Core\Response;
 use Orin\Services\ConversationService;
 use Orin\Services\OutboundSender;
 
 /**
- * The merchant's live inbox: read the thread, take over from the AI, reply.
+ * The merchant's live inbox: read the thread, approve a draft the agent wrote,
+ * take over from the agent, reply.
  */
 final class InboxController extends BaseController
 {
@@ -52,6 +54,7 @@ final class InboxController extends BaseController
             'merchant' => $merchant,
             'conversation' => $conversation,
             'messages' => $conversations->messages($id),
+            'notice' => app('session')->pullFlash('agent_notice'),
         ]);
     }
 
@@ -73,15 +76,7 @@ final class InboxController extends BaseController
         }
 
         $conversations->setHandoff($id, 'active');
-
-        $connection = $conversations->connectionFor((int) $merchant['id'], (string) $conversation['channel']);
-        $sent = false;
-
-        if ($connection !== null) {
-            /** @var OutboundSender $sender */
-            $sender = app('outbound_sender');
-            $sent = $sender->send((string) $conversation['channel'], $connection, (string) $conversation['contact_external_id'], $body);
-        }
+        $sent = $this->sendToContact((int) $merchant['id'], $conversation, $body);
 
         $conversations->storeMessage([
             'merchant_id' => (int) $merchant['id'],
@@ -90,10 +85,61 @@ final class InboxController extends BaseController
             'sender' => 'agent',
             'content_type' => 'text',
             'body' => $body,
+            'status' => $sent ? 'sent' : 'failed',
         ]);
         $conversations->touchConversation($id);
 
         app('audit')->log('inbox.reply', 'conversation', (string) $id, (int) $request->attributes['user_id'], 'merchant', ['sent' => $sent]);
+
+        return Response::redirect('/merchant/inbox/' . $id);
+    }
+
+    /** Approve the draft the agent wrote in observe mode and send it. */
+    public function approveDraft(Request $request): Response
+    {
+        $merchant = $this->requireMerchant($request);
+        if ($merchant === []) {
+            return Response::html('<h1>No merchant account</h1>', 404);
+        }
+
+        /** @var ConversationService $conversations */
+        $conversations = app('conversation_service');
+        $id = (int) ($request->attributes['route_params']['id'] ?? 0);
+        $conversation = $conversations->findConversation((int) $merchant['id'], $id);
+
+        if ($conversation === null) {
+            return Response::redirect('/merchant/inbox');
+        }
+
+        /** @var Database $db */
+        $db = app('db');
+        $draft = $db->first(
+            "SELECT id, body FROM messages
+             WHERE conversation_id = :c AND merchant_id = :m AND status = 'draft'
+             ORDER BY id DESC LIMIT 1",
+            ['c' => $id, 'm' => (int) $merchant['id']]
+        );
+
+        if ($draft === null) {
+            app('session')->flash('agent_notice', 'There is no draft waiting on this conversation.');
+
+            return Response::redirect('/merchant/inbox/' . $id);
+        }
+
+        $body = trim((string) $request->input('body', (string) $draft['body']));
+        $sent = $this->sendToContact((int) $merchant['id'], $conversation, $body);
+
+        $db->execute(
+            'UPDATE messages SET body = :b, status = :s WHERE id = :id AND merchant_id = :m',
+            [
+                'b' => $body,
+                's' => $sent ? 'sent' : 'failed',
+                'id' => (int) $draft['id'],
+                'm' => (int) $merchant['id'],
+            ]
+        );
+
+        app('audit')->log('inbox.approve_draft', 'conversation', (string) $id, (int) $request->attributes['user_id'], 'merchant', ['sent' => $sent]);
 
         return Response::redirect('/merchant/inbox/' . $id);
     }
@@ -108,6 +154,21 @@ final class InboxController extends BaseController
         return $this->setHandoff($request, 'none');
     }
 
+    /** @param array<string, mixed> $conversation */
+    private function sendToContact(int $merchantId, array $conversation, string $body): bool
+    {
+        $connection = app('conversation_service')->connectionFor($merchantId, (string) $conversation['channel']);
+
+        if ($connection === null) {
+            return false;
+        }
+
+        /** @var OutboundSender $sender */
+        $sender = app('outbound_sender');
+
+        return $sender->send((string) $conversation['channel'], $connection, (string) $conversation['contact_external_id'], $body);
+    }
+
     private function setHandoff(Request $request, string $status): Response
     {
         $merchant = $this->requireMerchant($request);
@@ -119,8 +180,7 @@ final class InboxController extends BaseController
         $conversations = app('conversation_service');
         $id = (int) ($request->attributes['route_params']['id'] ?? 0);
 
-        $conversation = $conversations->findConversation((int) $merchant['id'], $id);
-        if ($conversation !== null) {
+        if ($conversations->findConversation((int) $merchant['id'], $id) !== null) {
             $conversations->setHandoff($id, $status);
             app('audit')->log('inbox.handoff', 'conversation', (string) $id, (int) $request->attributes['user_id'], 'merchant', ['status' => $status]);
         }

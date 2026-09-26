@@ -3,11 +3,15 @@
 declare(strict_types=1);
 
 use Orin\Http\Controllers\Admin\DashboardController as AdminDashboard;
+use Orin\Http\Controllers\Merchant\AgentActionController;
+use Orin\Http\Controllers\Merchant\AgentController;
 use Orin\Http\Controllers\Merchant\ApiKeyController;
 use Orin\Http\Controllers\Merchant\BillingController;
 use Orin\Http\Controllers\Merchant\ChannelController;
 use Orin\Http\Controllers\Merchant\DashboardController as MerchantDashboard;
+use Orin\Http\Controllers\Merchant\FollowUpController;
 use Orin\Http\Controllers\Merchant\InboxController;
+use Orin\Http\Controllers\Merchant\KnowledgeController;
 use Orin\Http\Controllers\Merchant\LeadController;
 use Orin\Http\Controllers\Merchant\ProfileController;
 use Orin\Http\Controllers\Merchant\SettingsController;
@@ -37,27 +41,44 @@ $router->get('/reset-password', [PasswordResetController::class, 'showReset']);
 $router->post('/reset-password', [PasswordResetController::class, 'reset']);
 
 // --------------------------------------------------------------- webhooks
-// No session, no CSRF. These are authenticated by the Meta HMAC signature.
 $router->get('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify']);
 $router->post('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'receive']);
 $router->get('/webhooks/messenger', [MessengerWebhookController::class, 'verify']);
 $router->post('/webhooks/messenger', [MessengerWebhookController::class, 'receive']);
 
 // ------------------------------------------------------------ merchant area
-// Merchants do NOT choose AI providers. Provider selection, platform keys and
-// pricing are super-admin concerns. Merchants connect their own WhatsApp and
-// Messenger accounts and work the conversations and leads that come in.
+// The merchant owns their own agent: identity, knowledge, skills and autonomy.
+// Provider selection and platform keys stay with the super admin.
 $router->group('/merchant', ['auth', 'role:merchant'], function ($r) {
     $r->get('/dashboard', [MerchantDashboard::class, 'index']);
 
     $r->get('/inbox', [InboxController::class, 'index']);
     $r->get('/inbox/{id}', [InboxController::class, 'show']);
     $r->post('/inbox/{id}/reply', [InboxController::class, 'reply']);
+    $r->post('/inbox/{id}/approve-draft', [InboxController::class, 'approveDraft']);
     $r->post('/inbox/{id}/handoff', [InboxController::class, 'handoff']);
     $r->post('/inbox/{id}/resume-ai', [InboxController::class, 'resumeAi']);
 
     $r->get('/leads', [LeadController::class, 'index']);
     $r->post('/leads/{id}/stage', [LeadController::class, 'updateStage']);
+
+    $r->get('/followups', [FollowUpController::class, 'index']);
+    $r->post('/followups/{id}/cancel', [FollowUpController::class, 'cancel']);
+
+    $r->get('/actions', [AgentActionController::class, 'index']);
+    $r->post('/actions/{id}/status', [AgentActionController::class, 'setStatus']);
+
+    $r->get('/agents', [AgentController::class, 'index']);
+    $r->post('/agents', [AgentController::class, 'create']);
+    $r->get('/agents/{id}/edit', [AgentController::class, 'edit']);
+    $r->post('/agents/{id}', [AgentController::class, 'update']);
+    $r->post('/agents/{id}/status', [AgentController::class, 'toggleStatus']);
+
+    $r->get('/knowledge', [KnowledgeController::class, 'index']);
+    $r->post('/knowledge', [KnowledgeController::class, 'store']);
+    $r->post('/knowledge/{id}', [KnowledgeController::class, 'update']);
+    $r->post('/knowledge/{id}/toggle', [KnowledgeController::class, 'toggle']);
+    $r->post('/knowledge/{id}/delete', [KnowledgeController::class, 'delete']);
 
     $r->get('/channels', [ChannelController::class, 'index']);
     $r->post('/channels/whatsapp', [ChannelController::class, 'connectWhatsApp']);
