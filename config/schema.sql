@@ -85,18 +85,19 @@ CREATE TABLE IF NOT EXISTS api_keys (
     CONSTRAINT fk_api_keys_merchant FOREIGN KEY (merchant_id) REFERENCES merchants (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS merchant_providers (
-    id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    merchant_id    BIGINT UNSIGNED NOT NULL,
-    provider       VARCHAR(64)     NOT NULL,
-    enabled        TINYINT(1)      NOT NULL DEFAULT 1,
-    default_model  VARCHAR(128)    NOT NULL DEFAULT '',
-    has_custom_key TINYINT(1)      NOT NULL DEFAULT 0,
-    created_at     TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at     TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+-- Platform-level provider configuration. Managed by super admin ONLY.
+-- Merchants never read or write this table.
+CREATE TABLE IF NOT EXISTS platform_providers (
+    id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    provider      VARCHAR(64)     NOT NULL,
+    enabled       TINYINT(1)      NOT NULL DEFAULT 1,
+    api_key       VARCHAR(255)    NULL,
+    default_model VARCHAR(128)    NOT NULL DEFAULT '',
+    priority      INT UNSIGNED    NOT NULL DEFAULT 0,
+    created_at    TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at    TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
-    UNIQUE KEY uniq_merchant_provider (merchant_id, provider),
-    CONSTRAINT fk_merchant_providers_merchant FOREIGN KEY (merchant_id) REFERENCES merchants (id) ON DELETE CASCADE
+    UNIQUE KEY uniq_platform_provider (provider)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS usage_logs (
@@ -193,6 +194,7 @@ CREATE TABLE IF NOT EXISTS password_resets (
     KEY idx_password_resets_expiry (expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Engine-side tables (existing).
 CREATE TABLE IF NOT EXISTS provider_requests (
     id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     request_id         CHAR(36)        NOT NULL,

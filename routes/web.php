@@ -6,7 +6,6 @@ use Orin\Http\Controllers\Admin\DashboardController as AdminDashboard;
 use Orin\Http\Controllers\Merchant\ApiKeyController;
 use Orin\Http\Controllers\Merchant\BillingController;
 use Orin\Http\Controllers\Merchant\DashboardController as MerchantDashboard;
-use Orin\Http\Controllers\Merchant\ProviderController;
 use Orin\Http\Controllers\Merchant\SettingsController;
 use Orin\Http\Controllers\Merchant\UsageController;
 use Orin\Http\Controllers\Public\AuthController;
@@ -32,6 +31,8 @@ $router->get('/reset-password', [PasswordResetController::class, 'showReset']);
 $router->post('/reset-password', [PasswordResetController::class, 'reset']);
 
 // ------------------------------------------------------------ merchant area
+// Merchants do NOT choose AI providers. Provider selection, platform keys and
+// pricing are super-admin concerns. Merchants only consume the API.
 $router->group('/merchant', ['auth', 'role:merchant'], function ($r) {
     $r->get('/dashboard', [MerchantDashboard::class, 'index']);
 
@@ -40,9 +41,6 @@ $router->group('/merchant', ['auth', 'role:merchant'], function ($r) {
     $r->post('/api-keys/{id}/revoke', [ApiKeyController::class, 'revoke']);
 
     $r->get('/usage', [UsageController::class, 'index']);
-
-    $r->get('/providers', [ProviderController::class, 'index']);
-    $r->post('/providers', [ProviderController::class, 'update']);
 
     $r->get('/billing', [BillingController::class, 'index']);
 
