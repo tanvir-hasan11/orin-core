@@ -8,26 +8,23 @@ use Orin\Core\Request;
 use Orin\Core\Response;
 use Orin\Services\MerchantService;
 
-final class DashboardController
+final class DashboardController extends BaseController
 {
     public function index(Request $request): Response
     {
-        $userId = (int) $request->attributes['user_id'];
-
-        /** @var MerchantService $service */
-        $service = app('merchant_service');
-        $merchant = $service->forUser($userId);
-
-        if ($merchant === null) {
+        $merchant = $this->requireMerchant($request);
+        if ($merchant === []) {
             return Response::html('<h1>No merchant account</h1><p>Contact support.</p>', 404);
         }
 
+        /** @var MerchantService $service */
+        $service = app('merchant_service');
         $usage = $service->usageSummary((int) $merchant['id']);
 
-        return Response::html(view('merchant/dashboard', [
+        return $this->panel('merchant/dashboard', [
             'title' => 'Merchant Dashboard - Orin',
             'merchant' => $merchant,
             'usage' => $usage,
-        ]));
+        ]);
     }
 }

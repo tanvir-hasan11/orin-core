@@ -1,13 +1,6 @@
 <?php
 /** @var array<string, mixed> $merchant */
 /** @var array<string, mixed> $usage */
-
-$sidebar = '<a href="/merchant/dashboard">Dashboard</a>'
-    . '<a href="/merchant/api-keys">API Keys</a>'
-    . '<a href="/merchant/usage">Usage</a>'
-    . '<a href="/merchant/providers">Providers</a>'
-    . '<a href="/merchant/billing">Billing</a>'
-    . '<a href="/merchant/settings">Settings</a>';
 ?>
 <div class="cards">
     <div class="card"><div class="l">Plan</div><div class="n"><?= e($merchant['plan_name'] ?? 'Free') ?></div></div>

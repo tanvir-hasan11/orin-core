@@ -2,10 +2,6 @@
 
 declare(strict_types=1);
 
-/**
- * Global helpers. Autoloaded via composer "files".
- */
-
 use Orin\Support\Container;
 
 if (!function_exists('e')) {
@@ -58,9 +54,6 @@ if (!function_exists('old')) {
 }
 
 if (!function_exists('app')) {
-    /**
-     * Fetch the container or a registered service.
-     */
     function app(?string $service = null): mixed
     {
         $container = $GLOBALS['__orin_container'] ?? null;
@@ -73,7 +66,11 @@ if (!function_exists('app')) {
 }
 
 if (!function_exists('view')) {
-    /** @param array<string, mixed> $data */
+    /**
+     * Render a view. The optional $layout overrides the default layout.
+     *
+     * @param array<string, mixed> $data
+     */
     function view(string $template, array $data = [], ?string $layout = 'layouts/app'): string
     {
         return app('view')->render($template, $data, $layout);
@@ -110,5 +107,52 @@ if (!function_exists('current_user')) {
             'email' => (string) $session->get('user_email', ''),
             'name' => (string) $session->get('user_name', ''),
         ];
+    }
+}
+
+if (!function_exists('merchant_sidebar')) {
+    function merchant_sidebar(): string
+    {
+        $links = [
+            '/merchant/dashboard' => 'Dashboard',
+            '/merchant/api-keys' => 'API Keys',
+            '/merchant/usage' => 'Usage',
+            '/merchant/providers' => 'Providers',
+            '/merchant/billing' => 'Billing',
+            '/merchant/settings' => 'Settings',
+        ];
+
+        $path = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/';
+        $html = '';
+        foreach ($links as $href => $label) {
+            $active = str_starts_with($path, $href) ? ' style="background:#1e293b;color:#fff"' : '';
+            $html .= '<a href="' . e($href) . '"' . $active . '>' . e($label) . '</a>';
+        }
+
+        return $html;
+    }
+}
+
+if (!function_exists('admin_sidebar')) {
+    function admin_sidebar(): string
+    {
+        $links = [
+            '/admin/dashboard' => 'Dashboard',
+            '/admin/merchants' => 'Merchants',
+            '/admin/plans' => 'Plans',
+            '/admin/subscriptions' => 'Subscriptions',
+            '/admin/providers' => 'Providers',
+            '/admin/settings' => 'Settings',
+            '/admin/audit' => 'Audit',
+        ];
+
+        $path = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/';
+        $html = '';
+        foreach ($links as $href => $label) {
+            $active = str_starts_with($path, $href) ? ' style="background:#1e293b;color:#fff"' : '';
+            $html .= '<a href="' . e($href) . '"' . $active . '>' . e($label) . '</a>';
+        }
+
+        return $html;
     }
 }

@@ -3,7 +3,12 @@
 declare(strict_types=1);
 
 use Orin\Http\Controllers\Admin\DashboardController as AdminDashboard;
+use Orin\Http\Controllers\Merchant\ApiKeyController;
+use Orin\Http\Controllers\Merchant\BillingController;
 use Orin\Http\Controllers\Merchant\DashboardController as MerchantDashboard;
+use Orin\Http\Controllers\Merchant\ProviderController;
+use Orin\Http\Controllers\Merchant\SettingsController;
+use Orin\Http\Controllers\Merchant\UsageController;
 use Orin\Http\Controllers\Public\AuthController;
 use Orin\Http\Controllers\Public\HomeController;
 use Orin\Http\Controllers\Public\PasswordResetController;
@@ -29,6 +34,21 @@ $router->post('/reset-password', [PasswordResetController::class, 'reset']);
 // ------------------------------------------------------------ merchant area
 $router->group('/merchant', ['auth', 'role:merchant'], function ($r) {
     $r->get('/dashboard', [MerchantDashboard::class, 'index']);
+
+    $r->get('/api-keys', [ApiKeyController::class, 'index']);
+    $r->post('/api-keys', [ApiKeyController::class, 'store']);
+    $r->post('/api-keys/{id}/revoke', [ApiKeyController::class, 'revoke']);
+
+    $r->get('/usage', [UsageController::class, 'index']);
+
+    $r->get('/providers', [ProviderController::class, 'index']);
+    $r->post('/providers', [ProviderController::class, 'update']);
+
+    $r->get('/billing', [BillingController::class, 'index']);
+
+    $r->get('/settings', [SettingsController::class, 'index']);
+    $r->post('/settings', [SettingsController::class, 'update']);
+    $r->post('/settings/password', [SettingsController::class, 'updatePassword']);
 });
 
 // --------------------------------------------------------------- admin area

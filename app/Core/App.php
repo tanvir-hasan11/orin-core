@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Orin\Core;
 
+use Orin\Services\ApiKeyService;
 use Orin\Services\AuditService;
 use Orin\Services\AuthService;
 use Orin\Services\MerchantService;
@@ -77,11 +78,11 @@ final class App
         $this->container->set('rate_limiter', new RateLimiter($this->basePath . '/storage/cache'));
         $this->container->set('router', $this->router);
 
-        // Domain services.
         $audit = new AuditService($db);
         $this->container->set('audit', $audit);
         $this->container->set('auth', new AuthService($db, $session, $audit));
         $this->container->set('merchant_service', new MerchantService($db));
+        $this->container->set('api_key_service', new ApiKeyService($db, $audit));
     }
 
     public function container(): Container

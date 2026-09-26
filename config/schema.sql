@@ -4,7 +4,6 @@
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 1;
 
--- ---------------------------------------------------------------- users
 CREATE TABLE IF NOT EXISTS users (
     id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     role              ENUM('merchant','admin','super_admin') NOT NULL DEFAULT 'merchant',
@@ -21,7 +20,6 @@ CREATE TABLE IF NOT EXISTS users (
     KEY idx_users_role (role, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ---------------------------------------------------------------- plans
 CREATE TABLE IF NOT EXISTS plans (
     id                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     name                VARCHAR(120)    NOT NULL,
@@ -37,7 +35,6 @@ CREATE TABLE IF NOT EXISTS plans (
     UNIQUE KEY uniq_plans_code (code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ---------------------------------------------------------------- merchants
 CREATE TABLE IF NOT EXISTS merchants (
     id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     owner_user_id BIGINT UNSIGNED NOT NULL,
@@ -56,7 +53,6 @@ CREATE TABLE IF NOT EXISTS merchants (
     CONSTRAINT fk_merchants_plan  FOREIGN KEY (plan_id)       REFERENCES plans (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ---------------------------------------------------------------- subscriptions
 CREATE TABLE IF NOT EXISTS subscriptions (
     id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     merchant_id BIGINT UNSIGNED NOT NULL,
@@ -72,7 +68,6 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     CONSTRAINT fk_subs_plan     FOREIGN KEY (plan_id)     REFERENCES plans (id)     ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ---------------------------------------------------------------- api_keys
 CREATE TABLE IF NOT EXISTS api_keys (
     id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     merchant_id  BIGINT UNSIGNED NOT NULL,
@@ -90,7 +85,20 @@ CREATE TABLE IF NOT EXISTS api_keys (
     CONSTRAINT fk_api_keys_merchant FOREIGN KEY (merchant_id) REFERENCES merchants (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ---------------------------------------------------------------- usage
+CREATE TABLE IF NOT EXISTS merchant_providers (
+    id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    merchant_id    BIGINT UNSIGNED NOT NULL,
+    provider       VARCHAR(64)     NOT NULL,
+    enabled        TINYINT(1)      NOT NULL DEFAULT 1,
+    default_model  VARCHAR(128)    NOT NULL DEFAULT '',
+    has_custom_key TINYINT(1)      NOT NULL DEFAULT 0,
+    created_at     TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at     TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uniq_merchant_provider (merchant_id, provider),
+    CONSTRAINT fk_merchant_providers_merchant FOREIGN KEY (merchant_id) REFERENCES merchants (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS usage_logs (
     id                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     merchant_id       BIGINT UNSIGNED NOT NULL,
@@ -123,7 +131,6 @@ CREATE TABLE IF NOT EXISTS usage_monthly (
     CONSTRAINT fk_usage_monthly_merchant FOREIGN KEY (merchant_id) REFERENCES merchants (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ---------------------------------------------------------------- billing
 CREATE TABLE IF NOT EXISTS invoices (
     id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     merchant_id BIGINT UNSIGNED NOT NULL,
@@ -140,7 +147,6 @@ CREATE TABLE IF NOT EXISTS invoices (
     CONSTRAINT fk_invoices_merchant FOREIGN KEY (merchant_id) REFERENCES merchants (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ---------------------------------------------------------------- audit
 CREATE TABLE IF NOT EXISTS audit_logs (
     id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     actor_user_id BIGINT UNSIGNED NULL,
@@ -158,7 +164,6 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     CONSTRAINT fk_audit_actor FOREIGN KEY (actor_user_id) REFERENCES users (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ---------------------------------------------------------------- settings
 CREATE TABLE IF NOT EXISTS settings (
     `key`      VARCHAR(120) NOT NULL,
     `value`    TEXT         NULL,
@@ -166,7 +171,6 @@ CREATE TABLE IF NOT EXISTS settings (
     PRIMARY KEY (`key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ---------------------------------------------------------------- auth support
 CREATE TABLE IF NOT EXISTS sessions (
     id            VARCHAR(128)    NOT NULL,
     user_id       BIGINT UNSIGNED NULL,
@@ -189,7 +193,6 @@ CREATE TABLE IF NOT EXISTS password_resets (
     KEY idx_password_resets_expiry (expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ---------------------------------------------------------------- engine tables (existing)
 CREATE TABLE IF NOT EXISTS provider_requests (
     id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     request_id         CHAR(36)        NOT NULL,
@@ -245,7 +248,6 @@ CREATE TABLE IF NOT EXISTS prompt_cache (
     UNIQUE KEY uniq_prompt_cache_key (cache_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ---------------------------------------------------------------- seed
 INSERT INTO plans (name, code, price_usd, monthly_token_quota, max_api_keys, features, is_active)
 VALUES
     ('Free',  'free',  0.00,  100000,   2,  JSON_OBJECT('support','community'), 1),
