@@ -98,12 +98,16 @@ app/
     Public/                 <- Home, Auth, Signup, PasswordReset
     Webhook/                <- WhatsAppWebhook, MessengerWebhook
     Merchant/               <- Dashboard, Inbox, Lead, Channel, Profile,
-                               ApiKey, Usage, Billing, Settings
-    Admin/                  <- Dashboard, Merchant, Plan, Provider, Audit
+                               ApiKey, Usage, Billing, Settings, Agent,
+                               AgentAction, Knowledge, FollowUp
+    Admin/                  <- Dashboard, Merchant, Plan, Subscription,
+                               Provider, Settings, Audit
   Services/                 <- Auth, Audit, Merchant, ApiKey, AiGateway,
                                Conversation, Lead, Channel, OutboundSender,
                                VerticalRegistry, VerticalPromptBuilder,
-                               ReplyDirectiveParser, InboundMessageProcessor
+                               ReplyDirectiveParser, InboundMessageProcessor,
+                               Agent, AgentPromptBuilder, AgentSkillRunner,
+                               Knowledge, FollowUp
   Models/                   <- User, Merchant, ApiKey
 routes/
   web.php  api.php
@@ -121,6 +125,7 @@ tests/
 - Phase 2 - auth, roles, signup/login/reset  [done]
 - Phase 3 - merchant panel (keys, usage, billing, settings)  [done]
 - Phase 4 - channels, conversations, lead capture, vertical-aware replies  [done]
-- Phase 5 - super admin panel (merchants, plans, platform providers, settings, audit)
+- Phase 5 - super admin panel (merchants, plans, subscriptions, platform
+  providers, settings, audit)  [done]
 - Phase 6 - public site polish (pricing, docs, contact)
 - Phase 7 - follow-up automation, catalogue sync, courier booking, hardening
