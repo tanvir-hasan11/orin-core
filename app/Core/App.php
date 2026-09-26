@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Orin\Core;
 
+use Orin\Services\AuditService;
+use Orin\Services\AuthService;
+use Orin\Services\MerchantService;
 use Orin\Support\Container;
 use Orin\Support\Logger;
 use Throwable;
@@ -62,12 +65,23 @@ final class App
         $this->container->set('base_path', $this->basePath);
         $this->container->set('config', $this->config);
         $this->container->set('logger', new Logger($this->basePath . '/storage/logs/app.log'));
-        $this->container->set('db', new Database($this->config['database']));
+
+        $db = new Database($this->config['database']);
+        $this->container->set('db', $db);
+
         $this->container->set('view', new View($this->basePath . '/resources/views'));
-        $this->container->set('session', new Session((string) $app['session_name'], (int) $app['session_lifetime']));
-        $this->container->set('csrf', new Csrf($this->container->get('session')));
+
+        $session = new Session((string) $app['session_name'], (int) $app['session_lifetime']);
+        $this->container->set('session', $session);
+        $this->container->set('csrf', new Csrf($session));
         $this->container->set('rate_limiter', new RateLimiter($this->basePath . '/storage/cache'));
         $this->container->set('router', $this->router);
+
+        // Domain services.
+        $audit = new AuditService($db);
+        $this->container->set('audit', $audit);
+        $this->container->set('auth', new AuthService($db, $session, $audit));
+        $this->container->set('merchant_service', new MerchantService($db));
     }
 
     public function container(): Container

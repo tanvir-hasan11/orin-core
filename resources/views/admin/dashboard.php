@@ -1,6 +1,7 @@
 <?php
 /** @var array<string, int> $stats */
 /** @var array<int, array<string, mixed>> $recent */
+
 $sidebar = '<a href="/admin/dashboard">Dashboard</a>'
     . '<a href="/admin/merchants">Merchants</a>'
     . '<a href="/admin/plans">Plans</a>'
@@ -9,7 +10,6 @@ $sidebar = '<a href="/admin/dashboard">Dashboard</a>'
     . '<a href="/admin/settings">Settings</a>'
     . '<a href="/admin/audit">Audit</a>';
 ?>
-<?php ob_start(); ?>
 <div class="cards">
     <div class="card"><div class="l">Merchants</div><div class="n"><?= number_format($stats['merchants']) ?></div></div>
     <div class="card"><div class="l">Users</div><div class="n"><?= number_format($stats['users']) ?></div></div>
@@ -35,5 +35,3 @@ $sidebar = '<a href="/admin/dashboard">Dashboard</a>'
     <?php endif; ?>
     </tbody>
 </table>
-<?php $content = ob_get_clean(); ?>
-<?= $content ?>
