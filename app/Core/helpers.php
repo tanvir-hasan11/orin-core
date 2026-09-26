@@ -127,13 +127,17 @@ if (!function_exists('render_sidebar')) {
 if (!function_exists('merchant_sidebar')) {
     function merchant_sidebar(): string
     {
-        // Merchants manage keys, usage, billing and settings only.
-        // AI provider selection/keys are platform-level (super admin).
+        // The daily work: answer customers and work the leads.
+        // Provider selection is NOT here - that is a platform decision.
         return render_sidebar([
             '/merchant/dashboard' => 'Dashboard',
-            '/merchant/api-keys' => 'API Keys',
+            '/merchant/inbox' => 'Inbox',
+            '/merchant/leads' => 'Leads',
+            '/merchant/channels' => 'Channels',
+            '/merchant/profile' => 'Business Profile',
             '/merchant/usage' => 'Usage',
             '/merchant/billing' => 'Billing',
+            '/merchant/api-keys' => 'API Keys',
             '/merchant/settings' => 'Settings',
         ]);
     }

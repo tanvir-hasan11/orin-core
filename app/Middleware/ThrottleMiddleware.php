@@ -10,7 +10,11 @@ use Orin\Core\Response;
 use Orin\Support\Container;
 
 /**
- * Global per-IP throttle. Route-level throttling lands in Phase 4.
+ * Per-IP throttle for browser traffic.
+ *
+ * Webhook delivery is not throttled here: Meta retries are signed and the
+ * processor already de-duplicates by message id, so a rate limit would only
+ * cause Meta to queue messages we are about to accept anyway.
  */
 final class ThrottleMiddleware implements MiddlewareInterface
 {
@@ -28,6 +32,10 @@ final class ThrottleMiddleware implements MiddlewareInterface
 
     public function handle(Request $request, callable $next): Response
     {
+        if (str_starts_with($request->path, '/webhooks/')) {
+            return $next($request);
+        }
+
         $key = 'ip:' . $request->ip();
         $max = 120;
         $decay = 60;

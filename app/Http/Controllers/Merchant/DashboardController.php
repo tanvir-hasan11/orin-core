@@ -6,6 +6,7 @@ namespace Orin\Http\Controllers\Merchant;
 
 use Orin\Core\Request;
 use Orin\Core\Response;
+use Orin\Services\LeadService;
 use Orin\Services\MerchantService;
 
 final class DashboardController extends BaseController
@@ -21,10 +22,17 @@ final class DashboardController extends BaseController
         $service = app('merchant_service');
         $usage = $service->usageSummary((int) $merchant['id']);
 
+        /** @var LeadService $leads */
+        $leads = app('lead_service');
+        $profile = app('conversation_service')->profile((int) $merchant['id']);
+
         return $this->panel('merchant/dashboard', [
             'title' => 'Merchant Dashboard - Orin',
             'merchant' => $merchant,
             'usage' => $usage,
+            'leadCounts' => $leads->countsByStage((int) $merchant['id']),
+            'profile' => $profile,
+            'connected' => app('channel_service')->listFor((int) $merchant['id']),
         ]);
     }
 }

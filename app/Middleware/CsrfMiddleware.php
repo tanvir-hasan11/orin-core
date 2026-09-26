@@ -10,7 +10,8 @@ use Orin\Core\Response;
 use Orin\Support\Container;
 
 /**
- * Verifies the CSRF token on state-changing requests to non-API paths.
+ * Verifies the CSRF token on state-changing browser requests.
+ * API routes authenticate with a bearer key, webhooks with an HMAC signature.
  */
 final class CsrfMiddleware implements MiddlewareInterface
 {
@@ -29,9 +30,9 @@ final class CsrfMiddleware implements MiddlewareInterface
     public function handle(Request $request, callable $next): Response
     {
         $safe = in_array($request->method, ['GET', 'HEAD', 'OPTIONS'], true);
-        $api = str_starts_with($request->path, '/api/');
+        $exempt = str_starts_with($request->path, '/api/') || str_starts_with($request->path, '/webhooks/');
 
-        if ($safe || $api) {
+        if ($safe || $exempt) {
             return $next($request);
         }
 

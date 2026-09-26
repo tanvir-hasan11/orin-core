@@ -8,10 +8,12 @@ return [
     'debug' => filter_var(getenv('APP_DEBUG') ?: 'false', FILTER_VALIDATE_BOOLEAN),
     'url' => getenv('APP_URL') ?: 'http://localhost:8000',
     'timezone' => getenv('APP_TIMEZONE') ?: 'UTC',
+    'key' => getenv('APP_KEY') ?: '',
     'session_name' => getenv('APP_SESSION_NAME') ?: 'orin_session',
     'session_lifetime' => (int) (getenv('APP_SESSION_LIFETIME') ?: 7200),
     'signup_open' => filter_var(getenv('APP_SIGNUP_OPEN') ?: 'true', FILTER_VALIDATE_BOOLEAN),
     'default_plan_code' => getenv('APP_DEFAULT_PLAN') ?: 'free',
+    'reply_history_limit' => (int) (getenv('ORIN_REPLY_HISTORY') ?: 12),
     'mail' => [
         'driver' => getenv('MAIL_DRIVER') ?: 'log',
         'host' => getenv('MAIL_HOST') ?: '',

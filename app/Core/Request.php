@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 namespace Orin\Core;
 
-/**
- * Immutable representation of the current HTTP request.
- */
 final class Request
 {
     /**
-     * @param array<string, mixed> $query
-     * @param array<string, mixed> $body
-     * @param array<string, mixed> $files
+     * @param array<string, mixed>  $query
+     * @param array<string, mixed>  $body
+     * @param array<string, mixed>  $files
      * @param array<string, string> $headers
      * @param array<string, string> $cookies
      * @param array<string, string> $server
@@ -28,6 +25,7 @@ final class Request
         public readonly array $cookies = [],
         public readonly array $server = [],
         public array $attributes = [],
+        public readonly string $rawBody = '',
     ) {
     }
 
@@ -49,10 +47,15 @@ final class Request
             }
         }
 
+        // Webhook signature verification needs the untouched body.
+        $raw = '';
+        if (in_array($method, ['POST', 'PUT', 'PATCH'], true)) {
+            $raw = (string) file_get_contents('php://input');
+        }
+
         $body = $_POST;
-        $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
-        if (str_contains((string) $contentType, 'application/json')) {
-            $raw = file_get_contents('php://input') ?: '';
+        $contentType = (string) ($_SERVER['CONTENT_TYPE'] ?? '');
+        if (str_contains($contentType, 'application/json') && $raw !== '') {
             $decoded = json_decode($raw, true);
             if (is_array($decoded)) {
                 $body = $decoded;
@@ -68,6 +71,7 @@ final class Request
             headers: $headers,
             cookies: $_COOKIE,
             server: $_SERVER,
+            rawBody: $raw,
         );
     }
 
@@ -94,7 +98,8 @@ final class Request
     public function isJson(): bool
     {
         return str_contains((string) $this->header('Content-Type', ''), 'application/json')
-            || str_starts_with($this->path, '/api/');
+            || str_starts_with($this->path, '/api/')
+            || str_starts_with($this->path, '/webhooks/');
     }
 
     public function bearerToken(): ?string

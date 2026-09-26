@@ -5,13 +5,19 @@ declare(strict_types=1);
 use Orin\Http\Controllers\Admin\DashboardController as AdminDashboard;
 use Orin\Http\Controllers\Merchant\ApiKeyController;
 use Orin\Http\Controllers\Merchant\BillingController;
+use Orin\Http\Controllers\Merchant\ChannelController;
 use Orin\Http\Controllers\Merchant\DashboardController as MerchantDashboard;
+use Orin\Http\Controllers\Merchant\InboxController;
+use Orin\Http\Controllers\Merchant\LeadController;
+use Orin\Http\Controllers\Merchant\ProfileController;
 use Orin\Http\Controllers\Merchant\SettingsController;
 use Orin\Http\Controllers\Merchant\UsageController;
 use Orin\Http\Controllers\Public\AuthController;
 use Orin\Http\Controllers\Public\HomeController;
 use Orin\Http\Controllers\Public\PasswordResetController;
 use Orin\Http\Controllers\Public\SignupController;
+use Orin\Http\Controllers\Webhook\MessengerWebhookController;
+use Orin\Http\Controllers\Webhook\WhatsAppWebhookController;
 
 /** @var Orin\Core\Router $router */
 
@@ -30,11 +36,36 @@ $router->post('/forgot-password', [PasswordResetController::class, 'send']);
 $router->get('/reset-password', [PasswordResetController::class, 'showReset']);
 $router->post('/reset-password', [PasswordResetController::class, 'reset']);
 
+// --------------------------------------------------------------- webhooks
+// No session, no CSRF. These are authenticated by the Meta HMAC signature.
+$router->get('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify']);
+$router->post('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'receive']);
+$router->get('/webhooks/messenger', [MessengerWebhookController::class, 'verify']);
+$router->post('/webhooks/messenger', [MessengerWebhookController::class, 'receive']);
+
 // ------------------------------------------------------------ merchant area
 // Merchants do NOT choose AI providers. Provider selection, platform keys and
-// pricing are super-admin concerns. Merchants only consume the API.
+// pricing are super-admin concerns. Merchants connect their own WhatsApp and
+// Messenger accounts and work the conversations and leads that come in.
 $router->group('/merchant', ['auth', 'role:merchant'], function ($r) {
     $r->get('/dashboard', [MerchantDashboard::class, 'index']);
+
+    $r->get('/inbox', [InboxController::class, 'index']);
+    $r->get('/inbox/{id}', [InboxController::class, 'show']);
+    $r->post('/inbox/{id}/reply', [InboxController::class, 'reply']);
+    $r->post('/inbox/{id}/handoff', [InboxController::class, 'handoff']);
+    $r->post('/inbox/{id}/resume-ai', [InboxController::class, 'resumeAi']);
+
+    $r->get('/leads', [LeadController::class, 'index']);
+    $r->post('/leads/{id}/stage', [LeadController::class, 'updateStage']);
+
+    $r->get('/channels', [ChannelController::class, 'index']);
+    $r->post('/channels/whatsapp', [ChannelController::class, 'connectWhatsApp']);
+    $r->post('/channels/messenger', [ChannelController::class, 'connectMessenger']);
+    $r->post('/channels/{id}/disconnect', [ChannelController::class, 'disconnect']);
+
+    $r->get('/profile', [ProfileController::class, 'index']);
+    $r->post('/profile', [ProfileController::class, 'update']);
 
     $r->get('/api-keys', [ApiKeyController::class, 'index']);
     $r->post('/api-keys', [ApiKeyController::class, 'store']);
