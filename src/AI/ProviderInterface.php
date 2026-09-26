@@ -5,28 +5,24 @@ declare(strict_types=1);
 namespace Orin\AI;
 
 /**
- * Every AI provider adapter implements this.
- *
- * A provider MUST report isConfigured() = false when its API key is
- * missing or empty. The engine relies on this to skip dead entries in
- * the failover chain instead of burning a request on them.
+ * Contract every AI provider must implement.
  */
 interface ProviderInterface
 {
-    /** Short name used in logs and the messages table. e.g. "gemini" */
+    /**
+     * Human-readable provider name (e.g. "openai").
+     */
     public function name(): string;
 
-    /** True when this provider has everything it needs to make a call. */
+    /**
+     * Whether the provider is usable (i.e. has credentials configured).
+     */
     public function isConfigured(): bool;
 
     /**
-     * Send a chat completion request.
+     * Send a prompt to the provider and return the response.
      *
-     * @param array<int, array{role: string, content: string}> $messages
-     * @param array{model?: string, temperature?: float, max_tokens?: int, tools?: array} $options
-     *
-     * @throws RateLimitException     on HTTP 429
-     * @throws ProviderException      on any other provider failure
+     * @param array<string, mixed> $options
      */
-    public function chat(array $messages, array $options = []): ProviderResponse;
+    public function complete(string $prompt, array $options = []): ProviderResponse;
 }

@@ -1,40 +1,7 @@
-# ---- secrets ----
-.env
-.env.*
-!.env.example
-*.key
-*.pem
-*.p12
-credentials.json
-config/secrets.php
-config/local.php
-
-# ---- dependencies ----
-vendor/
-node_modules/
-
-# ---- runtime / generated ----
-uploads/
-storage/logs/
-storage/cache/
-cache/
-tmp/
+/vendor/
+/.env
 *.log
-sessions/
-
-# ---- database dumps ----
-*.sql.gz
-backups/
-db-backup-*.sql
-
-# ---- archives ----
-*.zip
-*.tar
-*.tar.gz
-
-# ---- OS / editor ----
-.DS_Store
-Thumbs.db
-*.swp
 .idea/
 .vscode/
+composer.lock
+.DS_Store

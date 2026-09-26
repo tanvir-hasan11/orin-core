@@ -1,0 +1,21 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+require __DIR__ . '/../vendor/autoload.php';
+
+use Orin\Bootstrap;
+
+$prompt = $argv[1] ?? null;
+
+if ($prompt === null) {
+    fwrite(STDERR, "Usage: orin \"your prompt here\"\n");
+    exit(1);
+}
+
+$app = Bootstrap::create(dirname(__DIR__));
+
+$response = $app->engine()->complete($prompt);
+
+fwrite(STDOUT, $response->content . "\n");

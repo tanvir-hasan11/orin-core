@@ -4,19 +4,22 @@ declare(strict_types=1);
 
 namespace Orin\AI;
 
+/**
+ * Outcome of a price guard inspection.
+ */
 final class PriceGuardResult
 {
-    /**
-     * @param float[] $mentioned  every currency figure found in the reply
-     * @param float[] $unverified the subset of those with no catalog match
-     */
     public function __construct(
-        public readonly array $mentioned,
-        public readonly array $unverified,
-    ) {}
+        public readonly bool $allowed,
+        public readonly int $estimatedInputTokens,
+        public readonly int $estimatedOutputTokens,
+        public readonly float $estimatedCostUsd,
+        public readonly ?string $reason = null,
+    ) {
+    }
 
-    public function passed(): bool
+    public static function block(int $input, int $output, float $cost, string $reason): self
     {
-        return $this->unverified === [];
+        return new self(false, $input, $output, $cost, $reason);
     }
 }

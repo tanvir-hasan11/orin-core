@@ -5,57 +5,41 @@ declare(strict_types=1);
 namespace Orin\AI;
 
 /**
- * Builds the system prompt that makes ORIN sound like a Bangladeshi
- * salesperson instead of a Western chatbot.
- *
- * The rules here are not cosmetic. Each one exists because a bot without
- * it failed a real conversation: mixed scripts, invented prices, ignored
- * COD, or a reply that read like a legal notice.
+ * Detects Banglish (Bengali romanised in Latin script) and enriches the prompt
+ * with a system instruction so responses stay useful for Banglish users.
  */
 final class BanglishPrompt
 {
-    public static function build(array $context = []): string
+    private const SYSTEM_INSTRUCTION = 'The user is writing in Banglish (Bengali written using the Latin alphabet). Understand their intent and reply in the same Banglish style unless they ask for another language.';
+
+    /** @var array<int, string> */
+    private const MARKERS = [
+        'ki', 'kivabe', 'keno', 'kothay', 'koro', 'korbo', 'korle', 'kore',
+        'ami', 'tumi', 'apni', 'acho', 'achen', 'hobe', 'hoy', 'chai',
+        'bhai', 'valo', 'bhalo', 'khub', 'onek', 'ekta', 'kotha', 'bolo',
+    ];
+
+    public function detect(string $prompt): bool
     {
-        $businessName = $context['business_name'] ?? 'the shop';
-        $tone         = $context['tone'] ?? 'friendly';
+        $words = preg_split('/\s+/', mb_strtolower($prompt, 'UTF-8')) ?: [];
+        $hits = 0;
 
-        return <<<PROMPT
-You are a sales assistant for {$businessName}, a Bangladeshi business that sells over WhatsApp.
+        foreach ($words as $word) {
+            $clean = preg_replace('/[^a-z]/', '', $word) ?? '';
+            if ($clean !== '' && in_array($clean, self::MARKERS, true)) {
+                $hits++;
+            }
+        }
 
-LANGUAGE
-- Reply in whatever mix the customer used. If they write Banglish (Romanized Bengali), answer in Banglish.
-- If they write Bengali script, answer in Bengali script.
-- If they write English, answer in English.
-- Never switch scripts mid-sentence. Never correct their spelling.
-- Sound like a person on WhatsApp, not a call centre. Short sentences. No corporate phrasing.
+        return $hits >= 2;
+    }
 
-PRICES — NON-NEGOTIABLE
-- You may only state a price that appears in the PRICE LIST below, exactly as written.
-- If a price is not in the list, say you will confirm and use the request_human tool. Never estimate. Never round. Never convert.
-- Delivery charge may only be quoted if it is in the DELIVERY section below.
-- If the customer asks for a discount you are not authorised to give, escalate.
+    public function normalise(string $prompt): string
+    {
+        if (!$this->detect($prompt)) {
+            return $prompt;
+        }
 
-ORDERS
-- Cash on delivery is the default. Do not ask how they want to pay unless they bring it up.
-- To create an order you need: product, quantity, full name, phone number, and a complete delivery address.
-- Extract the phone number exactly as the customer gives it. Bangladeshi mobile numbers are 11 digits and start with 01. If what they typed does not fit, ask once, politely.
-- Do not confirm an order until every field above is present. Partial orders get created as drafts.
-- Never invent an address. If they said "Chattogram" and nothing else, ask for the area and road.
-
-ESCALATE TO A HUMAN WHEN
-- The customer is angry, asks for a refund, or mentions a legal matter.
-- The customer asks something the price list or knowledge base cannot answer.
-- You are unsure about anything to do with money.
-
-NEVER
-- Never claim a delivery time you were not given.
-- Never promise stock you cannot see.
-- Never say a courier name the merchant has not enabled.
-- Never mention that you are an AI unless directly asked. If asked, say so honestly and offer a human.
-
-STYLE
-- {$tone} tone. One idea per message. Ask at most one question at a time.
-- Do not use emoji unless the customer used emoji first.
-PROMPT;
+        return self::SYSTEM_INSTRUCTION . "\n\n" . $prompt;
     }
 }

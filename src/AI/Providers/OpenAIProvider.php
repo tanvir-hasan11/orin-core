@@ -4,52 +4,49 @@ declare(strict_types=1);
 
 namespace Orin\AI\Providers;
 
-/** OpenAI Chat Completions — api.openai.com */
+use Orin\AI\ProviderResponse;
+
+/**
+ * OpenAI Chat Completions provider.
+ */
 final class OpenAIProvider extends AbstractProvider
 {
-    public function name(): string { return 'openai'; }
-
-    public function isConfigured(): bool
+    public function name(): string
     {
-        return $this->env('OPENAI_API_KEY') !== '';
+        return 'openai';
     }
 
-    protected function defaultModel(): string
+    public function complete(string $prompt, array $options = []): ProviderResponse
     {
-        return $this->env('OPENAI_MODEL', 'gpt-4o-mini');
-    }
+        $started = microtime(true);
 
-    protected function endpoint(): string
-    {
-        return 'https://api.openai.com/v1/chat/completions';
-    }
+        $response = $this->send(
+            $this->baseUrl() . '/chat/completions',
+            [
+                'model' => $this->model(),
+                'messages' => [
+                    ['role' => 'user', 'content' => $prompt],
+                ],
+            ],
+            [
+                'Authorization' => 'Bearer ' . $this->apiKey(),
+                'Content-Type' => 'application/json',
+            ]
+        );
 
-    protected function headers(): array
-    {
-        return ['Authorization: Bearer ' . $this->env('OPENAI_API_KEY')];
-    }
+        $this->assertSuccessful($response);
 
-    protected function buildBody(array $messages, array $options): array
-    {
-        return [
-            'model'       => $options['model'] ?? $this->defaultModel(),
-            'messages'    => array_map(
-                fn($m) => ['role' => $m['role'], 'content' => $m['content']],
-                $messages
-            ),
-            'temperature' => $options['temperature'] ?? 0.4,
-            'max_tokens'  => $options['max_tokens'] ?? 1024,
-        ];
-    }
+        $json = $response->json ?? [];
+        $usage = $json['usage'] ?? [];
 
-    protected function extractText(array $response): string
-    {
-        return trim((string) ($response['choices'][0]['message']['content'] ?? ''));
-    }
-
-    protected function extractUsage(array $response): array
-    {
-        $usage = $response['usage'] ?? [];
-        return [(int) ($usage['prompt_tokens'] ?? 0), (int) ($usage['completion_tokens'] ?? 0)];
+        return new ProviderResponse(
+            content: $this->extractOpenAiContent($json),
+            provider: $this->name(),
+            model: $this->model(),
+            promptTokens: (int) ($usage['prompt_tokens'] ?? 0),
+            completionTokens: (int) ($usage['completion_tokens'] ?? 0),
+            latencyMs: $this->elapsed($started),
+            raw: $json,
+        );
     }
 }
