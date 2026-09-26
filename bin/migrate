@@ -1,0 +1,29 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+$base = dirname(__DIR__);
+require $base . '/vendor/autoload.php';
+
+use Orin\Core\Database;
+use Orin\Core\Migrator;
+
+$config = require $base . '/config/database.php';
+$db = new Database($config);
+
+// First run the canonical schema, then any numbered migrations.
+$schema = $base . '/config/schema.sql';
+if (is_file($schema)) {
+    $db->pdo()->exec((string) file_get_contents($schema));
+    fwrite(STDOUT, "schema.sql applied\n");
+}
+
+$migrator = new Migrator($db, $base . '/config/migrations');
+$applied = $migrator->run();
+
+foreach ($applied as $file) {
+    fwrite(STDOUT, "migrated: {$file}\n");
+}
+
+fwrite(STDOUT, "Done.\n");
