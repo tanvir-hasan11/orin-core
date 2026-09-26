@@ -2,7 +2,13 @@
 
 declare(strict_types=1);
 
+use Orin\Http\Controllers\Admin\AuditController as AdminAudit;
 use Orin\Http\Controllers\Admin\DashboardController as AdminDashboard;
+use Orin\Http\Controllers\Admin\MerchantController as AdminMerchant;
+use Orin\Http\Controllers\Admin\PlanController as AdminPlan;
+use Orin\Http\Controllers\Admin\ProviderController as AdminProvider;
+use Orin\Http\Controllers\Admin\SettingsController as AdminSettings;
+use Orin\Http\Controllers\Admin\SubscriptionController as AdminSubscription;
 use Orin\Http\Controllers\Merchant\AgentActionController;
 use Orin\Http\Controllers\Merchant\AgentController;
 use Orin\Http\Controllers\Merchant\ApiKeyController;
@@ -102,6 +108,28 @@ $router->group('/merchant', ['auth', 'role:merchant'], function ($r) {
 });
 
 // --------------------------------------------------------------- admin area
+// The super admin owns the platform: merchants, plans, the AI provider chain,
+// platform settings and the audit trail. Merchants never reach this area.
 $router->group('/admin', ['auth', 'role:admin'], function ($r) {
     $r->get('/dashboard', [AdminDashboard::class, 'index']);
+
+    $r->get('/merchants', [AdminMerchant::class, 'index']);
+    $r->get('/merchants/{id}', [AdminMerchant::class, 'show']);
+    $r->post('/merchants/{id}/status', [AdminMerchant::class, 'updateStatus']);
+    $r->post('/merchants/{id}/plan', [AdminMerchant::class, 'assignPlan']);
+
+    $r->get('/plans', [AdminPlan::class, 'index']);
+    $r->post('/plans', [AdminPlan::class, 'store']);
+    $r->post('/plans/{id}', [AdminPlan::class, 'update']);
+
+    $r->get('/subscriptions', [AdminSubscription::class, 'index']);
+
+    $r->get('/providers', [AdminProvider::class, 'index']);
+    $r->post('/providers', [AdminProvider::class, 'save']);
+    $r->post('/providers/{id}/toggle', [AdminProvider::class, 'toggle']);
+
+    $r->get('/settings', [AdminSettings::class, 'index']);
+    $r->post('/settings', [AdminSettings::class, 'update']);
+
+    $r->get('/audit', [AdminAudit::class, 'index']);
 });
