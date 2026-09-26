@@ -6,9 +6,6 @@ namespace Orin\Core;
 
 use RuntimeException;
 
-/**
- * Small regex router supporting path parameters and per-route middleware.
- */
 final class Router
 {
     /** @var array<int, array<string, mixed>> */
@@ -16,6 +13,8 @@ final class Router
 
     /** @var array<int, string> */
     private array $groupMiddleware = [];
+
+    private ?string $currentPrefix = '';
 
     /** @param array<int, mixed> $handler */
     public function get(string $path, array $handler, array $middleware = []): void
@@ -44,8 +43,8 @@ final class Router
     /** @param array<int, string> $middleware */
     public function group(string $prefix, array $middleware, callable $callback): void
     {
-        $previous = $this->groupMiddleware;
-        $this->groupMiddleware = array_merge($previous, $middleware);
+        $previousMiddleware = $this->groupMiddleware;
+        $this->groupMiddleware = array_merge($previousMiddleware, $middleware);
 
         $previousPrefix = $this->currentPrefix ?? '';
         $this->currentPrefix = $previousPrefix . $prefix;
@@ -53,10 +52,8 @@ final class Router
         $callback($this);
 
         $this->currentPrefix = $previousPrefix;
-        $this->groupMiddleware = $previous;
+        $this->groupMiddleware = $previousMiddleware;
     }
-
-    private ?string $currentPrefix = '';
 
     /** @param array<int, mixed> $handler */
     private function add(string $method, string $path, array $handler, array $middleware): void
@@ -85,14 +82,12 @@ final class Router
     /** @param array<int, object> $middleware */
     public function dispatch(Request $request, array $middleware = []): Response
     {
-        $path = $request->path;
-
         foreach ($this->routes as $route) {
             if ($route['method'] !== $request->method) {
                 continue;
             }
 
-            if (preg_match($route['regex'], $path, $matches) !== 1) {
+            if (preg_match($route['regex'], $request->path, $matches) !== 1) {
                 continue;
             }
 
@@ -126,11 +121,13 @@ final class Router
             }
 
             $name = $required[$index];
-            $key = explode(':', $name, 2)[0];
+            [$key, $param] = array_pad(explode(':', $name, 2), 2, null);
 
             if (!isset($pipeline[$key])) {
                 throw new RuntimeException(sprintf('Middleware "%s" is not registered.', $key));
             }
+
+            $request->attributes['mw_' . $key] = $param;
 
             return $pipeline[$key]->handle($request, fn (Request $req): Response => $runner($index + 1));
         };
@@ -160,7 +157,6 @@ final class Router
         }
 
         $controller = new $class();
-
         $result = $controller->{$method}($request);
 
         if ($result instanceof Response) {

@@ -8,10 +8,6 @@ use Orin\Core\Request;
 use Orin\Core\Response;
 use Orin\Support\Container;
 
-/**
- * Route guard for roles, e.g. middleware "role:admin".
- * super_admin implicitly satisfies both merchant and admin requirements.
- */
 final class RoleMiddleware implements MiddlewareInterface
 {
     public function __construct(private Container $container)
@@ -25,7 +21,7 @@ final class RoleMiddleware implements MiddlewareInterface
 
     public function handle(Request $request, callable $next): Response
     {
-        $required = $request->attributes['required_role'] ?? null;
+        $required = $request->attributes['mw_role'] ?? null;
         $role = (string) ($request->attributes['user_role'] ?? 'guest');
 
         if (!is_string($required) || $required === '') {
@@ -36,8 +32,11 @@ final class RoleMiddleware implements MiddlewareInterface
         if ($required === 'admin') {
             $allowed[] = 'super_admin';
         }
+        if ($required === 'merchant') {
+            $allowed[] = 'super_admin';
+        }
 
-        if ($role === 'super_admin' || in_array($role, $allowed, true)) {
+        if (in_array($role, $allowed, true)) {
             return $next($request);
         }
 

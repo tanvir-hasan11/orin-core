@@ -6,10 +6,9 @@ declare(strict_types=1);
  * Global helpers. Autoloaded via composer "files".
  */
 
+use Orin\Support\Container;
+
 if (!function_exists('e')) {
-    /**
-     * Escape a value for safe HTML output.
-     */
     function e(mixed $value): string
     {
         return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
@@ -18,8 +17,6 @@ if (!function_exists('e')) {
 
 if (!function_exists('config')) {
     /**
-     * Read a dotted config value from the given array tree.
-     *
      * @param array<string, mixed> $tree
      */
     function config(array $tree, string $key, mixed $default = null): mixed
@@ -49,8 +46,6 @@ if (!function_exists('base_path')) {
 
 if (!function_exists('old')) {
     /**
-     * Fetch a flashed form value.
-     *
      * @param array<string, mixed> $flash
      */
     function old(array $flash, string $key, string $default = ''): string
@@ -59,5 +54,61 @@ if (!function_exists('old')) {
         $value = is_array($values) ? ($values[$key] ?? $default) : $default;
 
         return (string) $value;
+    }
+}
+
+if (!function_exists('app')) {
+    /**
+     * Fetch the container or a registered service.
+     */
+    function app(?string $service = null): mixed
+    {
+        $container = $GLOBALS['__orin_container'] ?? null;
+        if (!$container instanceof Container) {
+            throw new RuntimeException('Application container is not booted.');
+        }
+
+        return $service === null ? $container : $container->get($service);
+    }
+}
+
+if (!function_exists('view')) {
+    /** @param array<string, mixed> $data */
+    function view(string $template, array $data = [], ?string $layout = 'layouts/app'): string
+    {
+        return app('view')->render($template, $data, $layout);
+    }
+}
+
+if (!function_exists('csrf_token')) {
+    function csrf_token(): string
+    {
+        return (string) app('csrf')->token();
+    }
+}
+
+if (!function_exists('csrf_field')) {
+    function csrf_field(): string
+    {
+        return '<input type="hidden" name="_token" value="' . e(csrf_token()) . '">';
+    }
+}
+
+if (!function_exists('current_user')) {
+    /** @return array<string, mixed>|null */
+    function current_user(): ?array
+    {
+        $session = app('session');
+        $id = $session->get('user_id');
+        if ($id === null) {
+            return null;
+        }
+
+        return [
+            'id' => (int) $id,
+            'role' => (string) $session->get('user_role', 'merchant'),
+            'email' => (string) $session->get('user_email', ''),
+            'name' => (string) $session->get('user_name', ''),
+        ];
     }
 }

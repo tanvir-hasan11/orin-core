@@ -8,10 +8,6 @@ use Orin\Support\Container;
 use Orin\Support\Logger;
 use Throwable;
 
-/**
- * Application bootstrap: wires config, database, session, view and router,
- * then dispatches the current request.
- */
 final class App
 {
     private Container $container;
@@ -37,9 +33,14 @@ final class App
 
         date_default_timezone_set((string) $config['app']['timezone']);
 
+        foreach (['/storage/logs', '/storage/cache', '/storage/sessions'] as $dir) {
+            if (!is_dir($basePath . $dir)) {
+                @mkdir($basePath . $dir, 0775, true);
+            }
+        }
+
         $router = new Router();
 
-        // Register routes.
         $register = static function (Router $router, string $file): void {
             require $file;
         };
@@ -48,6 +49,8 @@ final class App
 
         $app = new self($basePath, $config, $router);
         $app->registerServices();
+
+        $GLOBALS['__orin_container'] = $app->container;
 
         return $app;
     }
